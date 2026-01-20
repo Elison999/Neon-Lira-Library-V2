@@ -1,0 +1,163 @@
+-------------------------------------------------------------------------
+-- PASSO 1: CARREGUE A LIBRARY AQUI (OU USE LOADSTRING SE JÁ TIVER O LINK)
+-- Supondo que a variável 'Aether' já contém a library carregada acima
+-------------------------------------------------------------------------
+
+-- Se você salvou a library em um arquivo, faria assim:
+-- local Aether = loadstring(game:HttpGet("https://raw.githubusercontent.com/Elison999/Neon-library-v2/refs/heads/main/Ui%20library"))()
+
+-- Se você colou a library no mesmo script, a variável 'Aether' já existe.
+
+-------------------------------------------------------------------------
+-- PASSO 2: CONFIGURAÇÃO DA JANELA (WINDOW)
+-------------------------------------------------------------------------
+local Window = Aether:Window({
+    Name = "Script Hub - Mobile/PC", -- Nome que aparece no Topbar
+    
+    -- Sistema de Key (Configurado como você pediu)
+    KeyEnable = false, -- Mude para true se quiser testar a tela de login
+    KeyName = "My new script",
+    Key = "8846_9973",
+    AutoSaveKey = false,
+    AutoLoadKey = false,
+    GrabKeyFromSite = false,
+    KeySite = "https://pastebin.com/raw/exemplo"
+})
+
+-- Adiciona a aba de configurações internas (Auto Save, Toggle Load, Temas, etc)
+Window:AddConfig()
+
+-------------------------------------------------------------------------
+-- PASSO 3: CRIANDO AS TABS
+-------------------------------------------------------------------------
+local TabFarm = Window:MakeTab({Name = "Auto Farm", Icon = "rbxassetid://123456"})
+local TabVisual = Window:MakeTab({Name = "Visuais", Icon = "rbxassetid://123456"})
+local TabMisc = Window:MakeTab({Name = "Outros"})
+
+-------------------------------------------------------------------------
+-- PASSO 4: ADICIONANDO OS 13 ELEMENTOS EXIGIDOS
+-------------------------------------------------------------------------
+
+-- === [TAB 1: FARM] ===
+
+-- 1. SECTION
+TabFarm:AddSection("Configurações Principais")
+
+-- 2. TOGGLE SWITCH
+TabFarm:AddToggle({
+    Name = "Auto Farm Level",
+    Default = false,
+    Callback = function(Value)
+        print("Auto Farm está:", Value)
+        -- Coloque seu código de loop aqui
+    end
+})
+
+-- 3. CHECKBOX (Estilo caixa)
+TabFarm:AddCheckbox({
+    Name = "Auto Collect Drops",
+    Default = true,
+    Callback = function(Value)
+        print("Coletar drops:", Value)
+    end
+})
+
+-- 4. DROPDOWN
+TabFarm:AddDropdown({
+    Name = "Escolher Arma",
+    Default = "Espada",
+    Options = {"Espada", "Katana", "Machado", "Arco", "Arma de Fogo"},
+    Callback = function(Value)
+        print("Arma selecionada:", Value)
+    end
+})
+
+-- 5. SLIDER
+TabFarm:AddSlider({
+    Name = "Distância do Ataque",
+    Min = 0,
+    Max = 100,
+    Default = 15,
+    Callback = function(Value)
+        print("Distância definida para:", Value)
+    end
+})
+
+-- === [TAB 2: VISUAIS] ===
+
+TabVisual:AddSection("ESP Feature")
+
+-- 6. MULTI DROPDOWN
+TabVisual:AddMultiDropdown({
+    Name = "Alvos do ESP",
+    Options = {"Jogadores", "NPCs", "Baús", "Itens Raros", "Veículos"},
+    Callback = function(Items)
+        print("Itens selecionados no MultiDropdown:")
+        for Item, Ativo in pairs(Items) do
+            if Ativo then
+                print("- " .. Item)
+            end
+        end
+    end
+})
+
+-- 7. COLOR PICKER (Simplificado com Sliders RGB)
+TabVisual:AddColorPicker({
+    Name = "Cor do ESP"
+})
+
+-- 8. TOGGLE (Para testar toggle transparente nas configs)
+TabVisual:AddToggle({
+    Name = "Fullbright",
+    Default = false,
+    Callback = function(v)
+        if v then
+            game.Lighting.Brightness = 2
+            game.Lighting.ClockTime = 14
+        else
+            game.Lighting.Brightness = 1
+        end
+    end
+})
+
+-- === [TAB 3: OUTROS] ===
+
+-- 9. LABEL
+TabMisc:AddLabel("Informações do Jogador")
+
+-- 10. TEXTBOX
+TabMisc:AddTextBox({
+    Name = "Mensagem de Spam",
+    Callback = function(Text)
+        print("Texto digitado:", Text)
+    end
+})
+
+-- 11. KEYBIND
+TabMisc:AddKeybind({
+    Name = "Botão de Pânico (Fechar UI)",
+    Default = Enum.KeyCode.RightControl,
+    Callback = function(Key)
+        print("Tecla pressionada:", Key.Name)
+        -- Lógica para esconder a UI poderia ir aqui se não fosse automática
+    end
+})
+
+-- 12. PARAGRAPH
+TabMisc:AddParagraph("Changelog v1.0", "Adicionado suporte a Mobile e PC.\nNovo sistema de temas.\nCorreção de bugs no dropdown.")
+
+-- 13. IMAGE
+TabMisc:AddImage("6031048352") -- Exemplo de imagem (ícone do roblox checkmark)
+
+-- 14. BUTTON (Elemento clássico)
+TabMisc:AddButton({
+    Name = "Destruir Interface (Panic)",
+    Callback = function()
+        game.CoreGui.AetherUI:Destroy()
+    end
+})
+
+-------------------------------------------------------------------------
+-- FINALIZAÇÃO
+-------------------------------------------------------------------------
+print("Ui Library Aether Carregada com Sucesso!")
