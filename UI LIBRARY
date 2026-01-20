@@ -1,0 +1,1114 @@
+--[[
+    AETHER UI LIBRARY
+    Versão: 1.0.0
+    Suporte: Mobile & PC
+    Features: 
+    - Key System Avançado
+    - 30 Temas
+    - Auto Save/Load
+    - 13 Elementos de UI
+    - Drag/Resize/Minimize
+]]
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+
+local Aether = {
+    Flags = {},
+    Theme = {},
+    Folder = "AetherSettings",
+    CurrentWindow = nil
+}
+
+--// UTILITIES \\--
+local function MakeDraggable(topbarobject, object)
+    local Dragging = nil
+    local DragInput = nil
+    local DragStart = nil
+    local StartPosition = nil
+
+    local function Update(input)
+        local Delta = input.Position - DragStart
+        local Position = UDim2.new(StartPosition.X.Scale, StartPosition.X.Offset + Delta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + Delta.Y)
+        game:GetService("TweenService"):Create(object, TweenInfo.new(0.25), {Position = Position}):Play()
+    end
+
+    topbarobject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            DragStart = input.Position
+            StartPosition = object.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+
+    topbarobject.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            DragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == DragInput and Dragging then
+            Update(input)
+        end
+    end)
+end
+
+local function Tween(obj, props, time)
+    TweenService:Create(obj, TweenInfo.new(time or 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
+end
+
+local function SaveFile(name, content)
+    if not isfolder(Aether.Folder) then makefolder(Aether.Folder) end
+    writefile(Aether.Folder .. "/" .. name .. ".json", HttpService:JSONEncode(content))
+end
+
+local function LoadFile(name)
+    if not isfolder(Aether.Folder) then makefolder(Aether.Folder) end
+    if isfile(Aether.Folder .. "/" .. name .. ".json") then
+        return HttpService:JSONDecode(readfile(Aether.Folder .. "/" .. name .. ".json"))
+    end
+    return nil
+end
+
+--// THEMES SYSTEM (30 THEMES) \\--
+Aether.Themes = {
+    Default = {Main = Color3.fromRGB(25, 25, 25), Secondary = Color3.fromRGB(35, 35, 35), Accent = Color3.fromRGB(0, 122, 255), Text = Color3.fromRGB(255, 255, 255)},
+    Dark = {Main = Color3.fromRGB(15, 15, 15), Secondary = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(80, 80, 80), Text = Color3.fromRGB(240, 240, 240)},
+    Light = {Main = Color3.fromRGB(240, 240, 240), Secondary = Color3.fromRGB(255, 255, 255), Accent = Color3.fromRGB(0, 122, 255), Text = Color3.fromRGB(20, 20, 20)},
+    Blood = {Main = Color3.fromRGB(20, 10, 10), Secondary = Color3.fromRGB(30, 15, 15), Accent = Color3.fromRGB(200, 40, 40), Text = Color3.fromRGB(255, 240, 240)},
+    Ocean = {Main = Color3.fromRGB(10, 20, 30), Secondary = Color3.fromRGB(15, 30, 45), Accent = Color3.fromRGB(0, 150, 200), Text = Color3.fromRGB(220, 240, 255)},
+    Forest = {Main = Color3.fromRGB(20, 30, 20), Secondary = Color3.fromRGB(30, 45, 30), Accent = Color3.fromRGB(40, 180, 80), Text = Color3.fromRGB(240, 255, 240)},
+    Midnight = {Main = Color3.fromRGB(10, 10, 20), Secondary = Color3.fromRGB(20, 20, 35), Accent = Color3.fromRGB(100, 80, 255), Text = Color3.fromRGB(240, 240, 255)},
+    Solar = {Main = Color3.fromRGB(255, 250, 240), Secondary = Color3.fromRGB(255, 255, 255), Accent = Color3.fromRGB(255, 160, 0), Text = Color3.fromRGB(50, 40, 20)},
+    Cyberpunk = {Main = Color3.fromRGB(10, 10, 15), Secondary = Color3.fromRGB(20, 20, 30), Accent = Color3.fromRGB(255, 0, 255), Text = Color3.fromRGB(0, 255, 255)},
+    Void = {Main = Color3.fromRGB(5, 5, 5), Secondary = Color3.fromRGB(12, 12, 12), Accent = Color3.fromRGB(50, 50, 50), Text = Color3.fromRGB(180, 180, 180)},
+    Retro = {Main = Color3.fromRGB(40, 30, 60), Secondary = Color3.fromRGB(50, 40, 70), Accent = Color3.fromRGB(255, 0, 100), Text = Color3.fromRGB(0, 255, 200)},
+    Mint = {Main = Color3.fromRGB(240, 255, 245), Secondary = Color3.fromRGB(255, 255, 255), Accent = Color3.fromRGB(0, 200, 150), Text = Color3.fromRGB(40, 50, 45)},
+    PurpleHaze = {Main = Color3.fromRGB(30, 20, 40), Secondary = Color3.fromRGB(40, 25, 50), Accent = Color3.fromRGB(150, 50, 220), Text = Color3.fromRGB(240, 230, 255)},
+    Dracula = {Main = Color3.fromRGB(40, 42, 54), Secondary = Color3.fromRGB(68, 71, 90), Accent = Color3.fromRGB(189, 147, 249), Text = Color3.fromRGB(248, 248, 242)},
+    Nord = {Main = Color3.fromRGB(46, 52, 64), Secondary = Color3.fromRGB(59, 66, 82), Accent = Color3.fromRGB(136, 192, 208), Text = Color3.fromRGB(236, 239, 244)},
+    Gruvbox = {Main = Color3.fromRGB(40, 40, 40), Secondary = Color3.fromRGB(50, 48, 47), Accent = Color3.fromRGB(215, 153, 33), Text = Color3.fromRGB(235, 219, 178)},
+    CottonCandy = {Main = Color3.fromRGB(255, 240, 245), Secondary = Color3.fromRGB(255, 255, 255), Accent = Color3.fromRGB(255, 105, 180), Text = Color3.fromRGB(80, 80, 100)},
+    Lavender = {Main = Color3.fromRGB(230, 230, 250), Secondary = Color3.fromRGB(245, 245, 255), Accent = Color3.fromRGB(147, 112, 219), Text = Color3.fromRGB(60, 50, 80)},
+    Slate = {Main = Color3.fromRGB(30, 35, 40), Secondary = Color3.fromRGB(40, 45, 50), Accent = Color3.fromRGB(100, 110, 120), Text = Color3.fromRGB(200, 210, 220)},
+    Gold = {Main = Color3.fromRGB(20, 20, 20), Secondary = Color3.fromRGB(30, 30, 30), Accent = Color3.fromRGB(218, 165, 32), Text = Color3.fromRGB(255, 255, 240)},
+    Rust = {Main = Color3.fromRGB(30, 20, 15), Secondary = Color3.fromRGB(40, 30, 25), Accent = Color3.fromRGB(200, 80, 50), Text = Color3.fromRGB(230, 220, 210)},
+    Toxic = {Main = Color3.fromRGB(20, 25, 20), Secondary = Color3.fromRGB(30, 35, 30), Accent = Color3.fromRGB(50, 255, 50), Text = Color3.fromRGB(220, 255, 220)},
+    Frozen = {Main = Color3.fromRGB(220, 240, 255), Secondary = Color3.fromRGB(240, 250, 255), Accent = Color3.fromRGB(100, 200, 255), Text = Color3.fromRGB(50, 80, 120)},
+    Volcano = {Main = Color3.fromRGB(40, 10, 10), Secondary = Color3.fromRGB(50, 20, 20), Accent = Color3.fromRGB(255, 80, 0), Text = Color3.fromRGB(255, 220, 200)},
+    Desert = {Main = Color3.fromRGB(50, 40, 30), Secondary = Color3.fromRGB(60, 50, 40), Accent = Color3.fromRGB(210, 180, 140), Text = Color3.fromRGB(240, 230, 220)},
+    Space = {Main = Color3.fromRGB(10, 10, 25), Secondary = Color3.fromRGB(20, 20, 40), Accent = Color3.fromRGB(150, 0, 200), Text = Color3.fromRGB(220, 200, 255)},
+    Abyss = {Main = Color3.fromRGB(0, 0, 0), Secondary = Color3.fromRGB(10, 10, 10), Accent = Color3.fromRGB(50, 0, 0), Text = Color3.fromRGB(150, 150, 150)},
+    Cloud = {Main = Color3.fromRGB(245, 245, 245), Secondary = Color3.fromRGB(255, 255, 255), Accent = Color3.fromRGB(150, 180, 200), Text = Color3.fromRGB(50, 50, 60)},
+    Neon = {Main = Color3.fromRGB(5, 5, 5), Secondary = Color3.fromRGB(10, 10, 10), Accent = Color3.fromRGB(0, 255, 0), Text = Color3.fromRGB(255, 255, 255)},
+    Valentine = {Main = Color3.fromRGB(40, 20, 25), Secondary = Color3.fromRGB(50, 30, 35), Accent = Color3.fromRGB(230, 50, 100), Text = Color3.fromRGB(255, 200, 210)},
+}
+
+Aether.CurrentTheme = Aether.Themes.Default
+
+--// UI CREATION \\--
+
+function Aether:Window(options)
+    local WindowFunctions = {}
+    local UIConfig = {
+        KeyEnable = options.KeyEnable or false,
+        KeyName = options.KeyName or "AetherKey",
+        Key = options.Key or "8846_9973",
+        AutoSaveKey = options.AutoSaveKey or false,
+        AutoLoadKey = options.AutoLoadKey or false,
+        GrabKeyFromSite = options.GrabKeyFromSite or false,
+        KeySite = options.KeySite or ""
+    }
+    
+    local ConfigSettings = {
+        AutoSave = false,
+        AutoLoad = false,
+        Transparency = false,
+        SelectedTheme = "Default"
+    }
+
+    -- MAIN SCREEN GUI
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AetherUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+
+    ----------------------------------------------------------
+    --              KEY SYSTEM LOGIC                        --
+    ----------------------------------------------------------
+    local KeyVerified = false
+
+    if UIConfig.KeyEnable then
+        local KeyFrame = Instance.new("Frame")
+        local KeyBox = Instance.new("TextBox")
+        local KeyBtn = Instance.new("TextButton")
+        local KeyTitle = Instance.new("TextLabel")
+        local KeyLink = Instance.new("TextButton")
+
+        KeyFrame.Size = UDim2.new(0, 350, 0, 200)
+        KeyFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
+        KeyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        KeyFrame.BorderSizePixel = 0
+        KeyFrame.Parent = ScreenGui
+        
+        local KeyCorner = Instance.new("UICorner", KeyFrame); KeyCorner.CornerRadius = UDim.new(0, 10)
+        
+        KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+        KeyTitle.BackgroundTransparency = 1
+        KeyTitle.Text = "Login - " .. UIConfig.KeyName
+        KeyTitle.TextColor3 = Color3.fromRGB(255,255,255)
+        KeyTitle.Font = Enum.Font.GothamBold
+        KeyTitle.TextSize = 18
+        KeyTitle.Parent = KeyFrame
+
+        KeyBox.Size = UDim2.new(0.8, 0, 0, 40)
+        KeyBox.Position = UDim2.new(0.1, 0, 0.35, 0)
+        KeyBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+        KeyBox.TextColor3 = Color3.fromRGB(255,255,255)
+        KeyBox.PlaceholderText = "Insira a chave aqui..."
+        KeyBox.Text = ""
+        KeyBox.Font = Enum.Font.Gotham
+        KeyBox.TextSize = 14
+        KeyBox.Parent = KeyFrame
+        Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 6)
+
+        KeyBtn.Size = UDim2.new(0.8, 0, 0, 35)
+        KeyBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+        KeyBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
+        KeyBtn.Text = "Entrar"
+        KeyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        KeyBtn.Font = Enum.Font.GothamBold
+        KeyBtn.Parent = KeyFrame
+        Instance.new("UICorner", KeyBtn).CornerRadius = UDim.new(0, 6)
+
+        KeyLink.Size = UDim2.new(1, 0, 0, 20)
+        KeyLink.Position = UDim2.new(0, 0, 0.88, 0)
+        KeyLink.BackgroundTransparency = 1
+        KeyLink.Text = "Copiar link da Key"
+        KeyLink.TextColor3 = Color3.fromRGB(150, 150, 150)
+        KeyLink.Font = Enum.Font.Gotham
+        KeyLink.TextSize = 12
+        KeyLink.Parent = KeyFrame
+        
+        -- Auto Load Key
+        local KeyFile = "AetherKey_" .. UIConfig.KeyName .. ".txt"
+        if UIConfig.AutoLoadKey and isfile(KeyFile) then
+            local SavedKey = readfile(KeyFile)
+            KeyBox.Text = SavedKey
+        end
+
+        local function CheckKey()
+            local InputKey = KeyBox.Text
+            local RealKey = UIConfig.Key
+            
+            if UIConfig.GrabKeyFromSite and UIConfig.KeySite ~= "" then
+                local success, result = pcall(function()
+                    return game:HttpGet(UIConfig.KeySite)
+                end)
+                if success then RealKey = result:gsub("\n",""):gsub(" ","") end
+            end
+
+            if InputKey == RealKey then
+                KeyVerified = true
+                if UIConfig.AutoSaveKey then
+                    writefile(KeyFile, InputKey)
+                end
+                TweenService:Create(KeyFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+                TweenService:Create(KeyTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+                TweenService:Create(KeyBox, TweenInfo.new(0.5), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                TweenService:Create(KeyBtn, TweenInfo.new(0.5), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                wait(0.5)
+                KeyFrame.Visible = false
+            else
+                KeyBtn.Text = "Chave Incorreta"
+                KeyBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
+                wait(1)
+                KeyBtn.Text = "Entrar"
+                KeyBtn.BackgroundColor3 = Color3.fromRGB(0,122,255)
+            end
+        end
+
+        KeyBtn.MouseButton1Click:Connect(CheckKey)
+        KeyLink.MouseButton1Click:Connect(function() setclipboard(UIConfig.KeySite) end)
+
+        repeat wait() until KeyVerified
+    end
+
+    ----------------------------------------------------------
+    --              MAIN WINDOW STRUCTURE                   --
+    ----------------------------------------------------------
+    local MainFrame = Instance.new("Frame")
+    local TopBar = Instance.new("Frame")
+    local Title = Instance.new("TextLabel")
+    local ContentContainer = Instance.new("Frame")
+    local TabContainer = Instance.new("ScrollingFrame")
+    local ElementsContainer = Instance.new("Frame")
+    local UICornerMain = Instance.new("UICorner")
+    
+    local StartSize = UDim2.new(0, 500, 0, 350)
+    local MinimizedSize = UDim2.new(0, 500, 0, 40)
+    
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 0, 0, 0) -- Animation start
+    MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+    MainFrame.BackgroundColor3 = Aether.CurrentTheme.Main
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+    
+    UICornerMain.CornerRadius = UDim.new(0, 6)
+    UICornerMain.Parent = MainFrame
+
+    -- Animate Opening
+    Tween(MainFrame, {Size = StartSize}, 0.6)
+    
+    -- TOPBAR
+    TopBar.Name = "TopBar"
+    TopBar.Size = UDim2.new(1, 0, 0, 40)
+    TopBar.BackgroundColor3 = Aether.CurrentTheme.Secondary
+    TopBar.BorderSizePixel = 0
+    TopBar.Parent = MainFrame
+    
+    local TopBarCorner = Instance.new("UICorner", TopBar)
+    TopBarCorner.CornerRadius = UDim.new(0, 6)
+    
+    -- Correção visual para o topbar não arredondar embaixo
+    local TopBarCover = Instance.new("Frame", TopBar)
+    TopBarCover.Size = UDim2.new(1,0,0,10)
+    TopBarCover.Position = UDim2.new(0,0,1,-10)
+    TopBarCover.BackgroundColor3 = Aether.CurrentTheme.Secondary
+    TopBarCover.BorderSizePixel = 0
+    TopBarCover.ZIndex = 0
+
+    Title.Text = options.Name or "Aether UI"
+    Title.Size = UDim2.new(0.5, 0, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Aether.CurrentTheme.Text
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+
+    MakeDraggable(TopBar, MainFrame)
+
+    -- CONTROLS (3 BUTÕES)
+    local ButtonContainer = Instance.new("Frame", TopBar)
+    ButtonContainer.Size = UDim2.new(0, 100, 1, 0)
+    ButtonContainer.Position = UDim2.new(1, -105, 0, 0)
+    ButtonContainer.BackgroundTransparency = 1
+
+    local function CreateTopButton(icon, order)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 30, 0, 30)
+        btn.Position = UDim2.new(0, (order-1)*35, 0, 5)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        btn.Text = icon
+        btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 14
+        btn.Parent = ButtonContainer
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        return btn
+    end
+
+    local BtnMinimize = CreateTopButton("-", 1)  -- Minimizar
+    local BtnResize = CreateTopButton("□", 2)    -- Tamanho
+    local BtnClose = CreateTopButton("X", 3)     -- Fechar
+
+    -- Logic Controls
+    local IsMinimized = false
+    BtnMinimize.MouseButton1Click:Connect(function()
+        IsMinimized = not IsMinimized
+        if IsMinimized then
+            Tween(MainFrame, {Size = MinimizedSize}, 0.4)
+            ContentContainer.Visible = false
+        else
+            Tween(MainFrame, {Size = StartSize}, 0.4)
+            wait(0.2)
+            ContentContainer.Visible = true
+        end
+    end)
+
+    local IsBig = false
+    BtnResize.MouseButton1Click:Connect(function()
+        IsBig = not IsBig
+        if IsBig then
+            local BigSize = UDim2.new(0, 700, 0, 500)
+            StartSize = BigSize
+            Tween(MainFrame, {Size = BigSize}, 0.4)
+        else
+            local NormalSize = UDim2.new(0, 500, 0, 350)
+            StartSize = NormalSize
+            Tween(MainFrame, {Size = NormalSize}, 0.4)
+        end
+    end)
+
+    BtnClose.MouseButton1Click:Connect(function()
+        Tween(MainFrame, {Size = UDim2.new(0,0,0,0)}, 0.4)
+        wait(0.4)
+        ScreenGui:Destroy()
+    end)
+
+    -- CONTAINER CONTENT
+    ContentContainer.Size = UDim2.new(1, 0, 1, -40)
+    ContentContainer.Position = UDim2.new(0, 0, 0, 40)
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.Parent = MainFrame
+
+    -- TABS LIST (Left Side)
+    TabContainer.Size = UDim2.new(0, 130, 1, -10)
+    TabContainer.Position = UDim2.new(0, 5, 0, 5)
+    TabContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    TabContainer.ScrollBarThickness = 2
+    TabContainer.BorderSizePixel = 0
+    TabContainer.Parent = ContentContainer
+    Instance.new("UICorner", TabContainer).CornerRadius = UDim.new(0, 6)
+    
+    local TabListLayout = Instance.new("UIListLayout", TabContainer)
+    TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabListLayout.Padding = UDim.new(0, 5)
+    
+    local TabPadding = Instance.new("UIPadding", TabContainer)
+    TabPadding.PaddingTop = UDim.new(0, 10)
+    TabPadding.PaddingLeft = UDim.new(0, 5)
+
+    -- ELEMENTS AREA (Right Side)
+    ElementsContainer.Size = UDim2.new(1, -145, 1, -10)
+    ElementsContainer.Position = UDim2.new(0, 140, 0, 5)
+    ElementsContainer.BackgroundTransparency = 1
+    ElementsContainer.Parent = ContentContainer
+
+    local StartTab = nil
+
+    -- UPDATE THEME FUNCTION
+    local function UpdateTheme(themeName)
+        local t = Aether.Themes[themeName]
+        if not t then return end
+        Aether.CurrentTheme = t
+        
+        Tween(MainFrame, {BackgroundColor3 = t.Main})
+        Tween(TopBar, {BackgroundColor3 = t.Secondary})
+        Tween(TopBarCover, {BackgroundColor3 = t.Secondary})
+        Title.TextColor3 = t.Text
+        
+        -- Refresh UI Elements (Iterate)
+        for _, v in pairs(MainFrame:GetDescendants()) do
+            if v:GetAttribute("ThemeType") == "Secondary" then
+                Tween(v, {BackgroundColor3 = t.Secondary})
+            elseif v:GetAttribute("ThemeType") == "Accent" then
+                Tween(v, {BackgroundColor3 = t.Accent})
+            elseif v:GetAttribute("ThemeType") == "Text" then
+                Tween(v, {TextColor3 = t.Text})
+            end
+        end
+    end
+
+    ----------------------------------------------------------
+    --              INTERNAL CONFIG TAB                     --
+    ----------------------------------------------------------
+    function WindowFunctions:AddConfig()
+        local ConfigTab = WindowFunctions:MakeTab({Name = "Configs", Icon = "rbxassetid://3926305904"})
+        
+        ConfigTab:AddSection("Library Settings")
+        
+        ConfigTab:AddToggle({
+            Name = "Auto Save",
+            Default = false,
+            Callback = function(v) 
+                ConfigSettings.AutoSave = v 
+                -- Logic can be hooked here
+            end
+        })
+        
+        ConfigTab:AddToggle({
+            Name = "Auto Load",
+            Default = false,
+            Callback = function(v) 
+                ConfigSettings.AutoLoad = v 
+                if v and not UIConfig.KeyEnable then
+                    -- Trigger Load
+                    local data = LoadFile(UIConfig.KeyName)
+                    if data then
+                        -- Logic to apply flags would go here
+                    end
+                end
+            end
+        })
+
+        ConfigTab:AddToggle({
+            Name = "Transparent UI (50%)",
+            Default = false,
+            Callback = function(v)
+                ConfigSettings.Transparency = v
+                if v then
+                    Tween(MainFrame, {BackgroundTransparency = 0.5})
+                else
+                    Tween(MainFrame, {BackgroundTransparency = 0})
+                end
+            end
+        })
+
+        local ThemeList = {}
+        for name, _ in pairs(Aether.Themes) do table.insert(ThemeList, name) end
+        table.sort(ThemeList)
+
+        ConfigTab:AddDropdown({
+            Name = "Choose Theme",
+            Options = ThemeList,
+            Default = "Default",
+            Callback = function(val)
+                ConfigSettings.SelectedTheme = val
+                UpdateTheme(val)
+            end
+        })
+        
+        ConfigTab:AddButton({
+            Name = "Save Config Now",
+            Callback = function()
+                local SaveData = {
+                    Flags = Aether.Flags,
+                    Settings = ConfigSettings
+                }
+                SaveFile(UIConfig.KeyName, SaveData)
+            end
+        })
+    end
+
+    ----------------------------------------------------------
+    --              TAB & ELEMENT CREATION                  --
+    ----------------------------------------------------------
+    function WindowFunctions:MakeTab(tabInfo)
+        local TabName = tabInfo.Name or "Tab"
+        local TabIcon = tabInfo.Icon or ""
+        
+        local TabButton = Instance.new("TextButton")
+        local TabPage = Instance.new("ScrollingFrame")
+        
+        -- Button
+        TabButton.Name = TabName
+        TabButton.Size = UDim2.new(1, -10, 0, 30)
+        TabButton.BackgroundColor3 = Aether.CurrentTheme.Secondary
+        TabButton.Text = TabName
+        TabButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+        TabButton.Font = Enum.Font.GothamMedium
+        TabButton.TextSize = 12
+        TabButton.Parent = TabContainer
+        TabButton.AutoButtonColor = false
+        TabButton:SetAttribute("ThemeType", "Secondary")
+        
+        Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 4)
+
+        -- Page
+        TabPage.Name = TabName .. "_Page"
+        TabPage.Size = UDim2.new(1, 0, 1, 0)
+        TabPage.BackgroundTransparency = 1
+        TabPage.ScrollBarThickness = 0
+        TabPage.Visible = false
+        TabPage.Parent = ElementsContainer
+        
+        local PageLayout = Instance.new("UIListLayout", TabPage)
+        PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        PageLayout.Padding = UDim.new(0, 5)
+        
+        local PagePadding = Instance.new("UIPadding", TabPage)
+        PagePadding.PaddingTop = UDim.new(0, 5)
+        PagePadding.PaddingBottom = UDim.new(0, 5)
+        
+        -- Switch Logic
+        TabButton.MouseButton1Click:Connect(function()
+            for _, v in pairs(ElementsContainer:GetChildren()) do
+                if v:IsA("ScrollingFrame") then v.Visible = false end
+            end
+            for _, v in pairs(TabContainer:GetChildren()) do
+                if v:IsA("TextButton") then 
+                    Tween(v, {TextColor3 = Color3.fromRGB(150,150,150)})
+                end
+            end
+            
+            TabPage.Visible = true
+            Tween(TabButton, {TextColor3 = Aether.CurrentTheme.Accent})
+        end)
+
+        if StartTab == nil then
+            StartTab = TabPage
+            TabPage.Visible = true
+            TabButton.TextColor3 = Aether.CurrentTheme.Accent
+        end
+        
+        -- ELEMENT CONTAINER
+        local Elements = {}
+
+        -- 1. BUTTON
+        function Elements:AddButton(info)
+            local BtnFrame = Instance.new("Frame")
+            local Interact = Instance.new("TextButton")
+            
+            BtnFrame.Size = UDim2.new(1, -10, 0, 35)
+            BtnFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            BtnFrame.Parent = TabPage
+            BtnFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", BtnFrame).CornerRadius = UDim.new(0, 4)
+
+            Interact.Size = UDim2.new(1, 0, 1, 0)
+            Interact.BackgroundTransparency = 1
+            Interact.Text = info.Name or "Button"
+            Interact.TextColor3 = Aether.CurrentTheme.Text
+            Interact.Font = Enum.Font.Gotham
+            Interact.TextSize = 13
+            Interact.Parent = BtnFrame
+            Interact:SetAttribute("ThemeType", "Text")
+            
+            Interact.MouseButton1Click:Connect(function()
+                if info.Callback then info.Callback() end
+                -- Ripple (simplified)
+                local c = Instance.new("Frame", Interact)
+                c.BackgroundColor3 = Color3.fromRGB(255,255,255)
+                c.BackgroundTransparency = 0.8
+                c.Size = UDim2.new(0,0,0,0)
+                c.Position = UDim2.new(0.5,0,0.5,0)
+                c.AnchorPoint = Vector2.new(0.5,0.5)
+                Instance.new("UICorner", c).CornerRadius = UDim.new(1,0)
+                c:TweenSize(UDim2.new(1.2,0,2.5,0), "Out", "Quad", 0.5)
+                game.Debris:AddItem(c, 0.5)
+            end)
+        end
+        
+        -- 2. TOGGLE
+        function Elements:AddToggle(info)
+            local ToggleFrame = Instance.new("Frame")
+            local ToggleBtn = Instance.new("TextButton")
+            local Title = Instance.new("TextLabel")
+            local Switch = Instance.new("Frame")
+            local Circle = Instance.new("Frame")
+            
+            local active = info.Default or false
+            
+            ToggleFrame.Size = UDim2.new(1, -10, 0, 35)
+            ToggleFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            ToggleFrame.Parent = TabPage
+            ToggleFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 4)
+            
+            ToggleBtn.Size = UDim2.new(1,0,1,0)
+            ToggleBtn.BackgroundTransparency = 1
+            ToggleBtn.Text = ""
+            ToggleBtn.Parent = ToggleFrame
+            
+            Title.Text = info.Name or "Toggle"
+            Title.Size = UDim2.new(0.7, 0, 1, 0)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = ToggleFrame
+            Title:SetAttribute("ThemeType", "Text")
+            
+            Switch.Size = UDim2.new(0, 40, 0, 20)
+            Switch.Position = UDim2.new(1, -50, 0.5, -10)
+            Switch.BackgroundColor3 = active and Aether.CurrentTheme.Accent or Color3.fromRGB(60,60,60)
+            Switch.Parent = ToggleFrame
+            Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+            
+            Circle.Size = UDim2.new(0, 16, 0, 16)
+            Circle.Position = active and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Circle.Parent = Switch
+            Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+            
+            local function UpdateToggle()
+                active = not active
+                Aether.Flags[info.Name] = active
+                
+                Tween(Switch, {BackgroundColor3 = active and Aether.CurrentTheme.Accent or Color3.fromRGB(60,60,60)})
+                Tween(Circle, {Position = active and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)})
+                
+                if info.Callback then info.Callback(active) end
+            end
+            
+            if info.Default then info.Callback(true) end -- Trigger default
+            ToggleBtn.MouseButton1Click:Connect(UpdateToggle)
+        end
+        
+        -- 3. CHECKBOX
+        function Elements:AddCheckbox(info)
+            local CheckFrame = Instance.new("Frame")
+            local CheckBtn = Instance.new("TextButton")
+            local Title = Instance.new("TextLabel")
+            local Box = Instance.new("Frame")
+            local Checkmark = Instance.new("ImageLabel")
+            
+            local active = info.Default or false
+            
+            CheckFrame.Size = UDim2.new(1, -10, 0, 35)
+            CheckFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            CheckFrame.Parent = TabPage
+            CheckFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", CheckFrame).CornerRadius = UDim.new(0, 4)
+            
+            CheckBtn.Size = UDim2.new(1,0,1,0)
+            CheckBtn.BackgroundTransparency = 1
+            CheckBtn.Text = ""
+            CheckBtn.Parent = CheckFrame
+            
+            Title.Text = info.Name or "Checkbox"
+            Title.Size = UDim2.new(0.7, 0, 1, 0)
+            Title.Position = UDim2.new(0, 40, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = CheckFrame
+            Title:SetAttribute("ThemeType", "Text")
+            
+            Box.Size = UDim2.new(0, 20, 0, 20)
+            Box.Position = UDim2.new(0, 10, 0.5, -10)
+            Box.BackgroundColor3 = active and Aether.CurrentTheme.Accent or Color3.fromRGB(60,60,60)
+            Box.Parent = CheckFrame
+            Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
+            
+            Checkmark.Size = UDim2.new(0, 14, 0, 14)
+            Checkmark.Position = UDim2.new(0.5, -7, 0.5, -7)
+            Checkmark.BackgroundTransparency = 1
+            Checkmark.Image = "rbxassetid://6031048352"
+            Checkmark.ImageColor3 = Color3.fromRGB(255,255,255)
+            Checkmark.Visible = active
+            Checkmark.Parent = Box
+            
+            local function UpdateCheck()
+                active = not active
+                Aether.Flags[info.Name] = active
+                
+                Tween(Box, {BackgroundColor3 = active and Aether.CurrentTheme.Accent or Color3.fromRGB(60,60,60)})
+                Checkmark.Visible = active
+                
+                if info.Callback then info.Callback(active) end
+            end
+            
+            if info.Default then info.Callback(true) end
+            CheckBtn.MouseButton1Click:Connect(UpdateCheck)
+        end
+        
+        -- 4. LABEL
+        function Elements:AddLabel(text)
+            local Lab = Instance.new("TextLabel")
+            Lab.Size = UDim2.new(1, -10, 0, 25)
+            Lab.BackgroundTransparency = 1
+            Lab.Text = text
+            Lab.TextColor3 = Aether.CurrentTheme.Text
+            Lab.Font = Enum.Font.Gotham
+            Lab.TextSize = 13
+            Lab.Parent = TabPage
+            Lab:SetAttribute("ThemeType", "Text")
+        end
+        
+        -- 5. SLIDER
+        function Elements:AddSlider(info)
+            local min, max = info.Min or 0, info.Max or 100
+            local default = info.Default or min
+            
+            local SliderFrame = Instance.new("Frame")
+            local Title = Instance.new("TextLabel")
+            local ValueL = Instance.new("TextLabel")
+            local SlideBar = Instance.new("Frame")
+            local Fill = Instance.new("Frame")
+            local Knob = Instance.new("Frame")
+            
+            SliderFrame.Size = UDim2.new(1, -10, 0, 50)
+            SliderFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            SliderFrame.Parent = TabPage
+            SliderFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 4)
+            
+            Title.Text = info.Name
+            Title.Size = UDim2.new(0.5, 0, 0, 25)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = SliderFrame
+            Title:SetAttribute("ThemeType", "Text")
+            
+            ValueL.Text = tostring(default)
+            ValueL.Size = UDim2.new(0.5, 0, 0, 25)
+            ValueL.Position = UDim2.new(0.5, -10, 0, 0)
+            ValueL.BackgroundTransparency = 1
+            ValueL.TextColor3 = Aether.CurrentTheme.Text
+            ValueL.Font = Enum.Font.Gotham
+            ValueL.TextSize = 13
+            ValueL.TextXAlignment = Enum.TextXAlignment.Right
+            ValueL.Parent = SliderFrame
+            
+            SlideBar.Size = UDim2.new(1, -20, 0, 6)
+            SlideBar.Position = UDim2.new(0, 10, 0, 35)
+            SlideBar.BackgroundColor3 = Color3.fromRGB(60,60,60)
+            SlideBar.Parent = SliderFrame
+            Instance.new("UICorner", SlideBar).CornerRadius = UDim.new(1,0)
+            
+            Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+            Fill.BackgroundColor3 = Aether.CurrentTheme.Accent
+            Fill.Parent = SlideBar
+            Fill:SetAttribute("ThemeType", "Accent")
+            Instance.new("UICorner", Fill).CornerRadius = UDim.new(1,0)
+            
+            local isDragging = false
+            
+            local function UpdateSlide(input)
+                local SizeX = math.clamp((input.Position.X - SlideBar.AbsolutePosition.X) / SlideBar.AbsoluteSize.X, 0, 1)
+                Fill.Size = UDim2.new(SizeX, 0, 1, 0)
+                local Val = math.floor(min + ((max - min) * SizeX))
+                ValueL.Text = tostring(Val)
+                if info.Callback then info.Callback(Val) end
+            end
+            
+            SlideBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = true
+                    UpdateSlide(input)
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = false
+                end
+            end)
+            
+            UserInputService.InputChanged:Connect(function(input)
+                if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    UpdateSlide(input)
+                end
+            end)
+        end
+        
+        -- 6. DROPDOWN
+        function Elements:AddDropdown(info)
+            local expanded = false
+            local DropFrame = Instance.new("Frame")
+            local DropBtn = Instance.new("TextButton")
+            local Title = Instance.new("TextLabel")
+            local Arrow = Instance.new("TextLabel")
+            local List = Instance.new("ScrollingFrame")
+            local Items = info.Options or {}
+            
+            DropFrame.Size = UDim2.new(1, -10, 0, 35)
+            DropFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            DropFrame.Parent = TabPage
+            DropFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", DropFrame).CornerRadius = UDim.new(0, 4)
+            
+            DropFrame.ClipsDescendants = true
+            
+            Title.Text = (info.Name or "Dropdown") .. " - " .. (info.Default or "Select")
+            Title.Size = UDim2.new(0.8, 0, 0, 35)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = DropFrame
+            
+            Arrow.Text = "v"
+            Arrow.Size = UDim2.new(0, 30, 0, 35)
+            Arrow.Position = UDim2.new(1, -30, 0, 0)
+            Arrow.BackgroundTransparency = 1
+            Arrow.TextColor3 = Color3.fromRGB(200,200,200)
+            Arrow.Font = Enum.Font.GothamBold
+            Arrow.TextSize = 14
+            Arrow.Parent = DropFrame
+            
+            List.Size = UDim2.new(1, 0, 0, 100)
+            List.Position = UDim2.new(0, 0, 0, 35)
+            List.BackgroundTransparency = 1
+            List.CanvasSize = UDim2.new(0, 0, 0, 0)
+            List.ScrollBarThickness = 2
+            List.Parent = DropFrame
+            
+            local ListLayout = Instance.new("UIListLayout", List)
+            ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            
+            local function RefreshList()
+                 for _, v in pairs(List:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+                 for _, opt in pairs(Items) do
+                    local b = Instance.new("TextButton")
+                    b.Size = UDim2.new(1, 0, 0, 25)
+                    b.BackgroundTransparency = 0.5
+                    b.BackgroundColor3 = Aether.CurrentTheme.Secondary
+                    b.Text = opt
+                    b.TextColor3 = Color3.fromRGB(255,255,255)
+                    b.Font = Enum.Font.Gotham
+                    b.TextSize = 12
+                    b.Parent = List
+                    b.MouseButton1Click:Connect(function()
+                        Title.Text = info.Name .. " - " .. opt
+                        expanded = false
+                        Tween(DropFrame, {Size = UDim2.new(1, -10, 0, 35)})
+                        Arrow.Rotation = 0
+                        if info.Callback then info.Callback(opt) end
+                    end)
+                 end
+                 List.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y)
+            end
+            
+            RefreshList()
+            
+            local Trigger = Instance.new("TextButton", DropFrame)
+            Trigger.Size = UDim2.new(1, 0, 0, 35)
+            Trigger.BackgroundTransparency = 1
+            Trigger.Text = ""
+            
+            Trigger.MouseButton1Click:Connect(function()
+                expanded = not expanded
+                if expanded then
+                    Tween(DropFrame, {Size = UDim2.new(1, -10, 0, 135)})
+                    Arrow.Rotation = 180
+                else
+                    Tween(DropFrame, {Size = UDim2.new(1, -10, 0, 35)})
+                    Arrow.Rotation = 0
+                end
+            end)
+        end
+
+        -- 7. MULTI DROPDOWN
+        function Elements:AddMultiDropdown(info)
+            local expanded = false
+            local DropFrame = Instance.new("Frame")
+            local Title = Instance.new("TextLabel")
+            local List = Instance.new("ScrollingFrame")
+            local SelectedItems = {}
+            
+            DropFrame.Size = UDim2.new(1, -10, 0, 35)
+            DropFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            DropFrame.Parent = TabPage
+            DropFrame:SetAttribute("ThemeType", "Secondary")
+            Instance.new("UICorner", DropFrame).CornerRadius = UDim.new(0, 4)
+            DropFrame.ClipsDescendants = true
+            
+            Title.Text = (info.Name or "Multi Select") .. "..."
+            Title.Size = UDim2.new(0.8, 0, 0, 35)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = DropFrame
+            
+            List.Size = UDim2.new(1, 0, 0, 100)
+            List.Position = UDim2.new(0, 0, 0, 35)
+            List.BackgroundTransparency = 1
+            List.ScrollBarThickness = 2
+            List.Parent = DropFrame
+            
+            local ListLayout = Instance.new("UIListLayout", List)
+            
+            local function UpdateTitle()
+                local txt = ""
+                for k, _ in pairs(SelectedItems) do txt = txt .. k .. ", " end
+                Title.Text = (info.Name) .. ": " .. txt
+            end
+
+            for _, opt in pairs(info.Options) do
+                local b = Instance.new("TextButton")
+                b.Size = UDim2.new(1, 0, 0, 25)
+                b.BackgroundTransparency = 0.5
+                b.BackgroundColor3 = Aether.CurrentTheme.Secondary
+                b.Text = opt
+                b.TextColor3 = Color3.fromRGB(200,200,200)
+                b.Font = Enum.Font.Gotham
+                b.TextSize = 12
+                b.Parent = List
+                
+                b.MouseButton1Click:Connect(function()
+                    if SelectedItems[opt] then
+                        SelectedItems[opt] = nil
+                        b.TextColor3 = Color3.fromRGB(200,200,200)
+                    else
+                        SelectedItems[opt] = true
+                        b.TextColor3 = Aether.CurrentTheme.Accent
+                    end
+                    UpdateTitle()
+                    if info.Callback then info.Callback(SelectedItems) end
+                end)
+            end
+            List.CanvasSize = UDim2.new(0,0,0, (#info.Options * 25))
+
+            local Trigger = Instance.new("TextButton", DropFrame)
+            Trigger.Size = UDim2.new(1, 0, 0, 35)
+            Trigger.BackgroundTransparency = 1
+            Trigger.Text = ""
+            Trigger.MouseButton1Click:Connect(function()
+                expanded = not expanded
+                Tween(DropFrame, {Size = expanded and UDim2.new(1, -10, 0, 135) or UDim2.new(1, -10, 0, 35)})
+            end)
+        end
+
+        -- 8. TEXTBOX
+        function Elements:AddTextBox(info)
+            local BoxFrame = Instance.new("Frame")
+            local Input = Instance.new("TextBox")
+            
+            BoxFrame.Size = UDim2.new(1, -10, 0, 35)
+            BoxFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            BoxFrame.Parent = TabPage
+            Instance.new("UICorner", BoxFrame).CornerRadius = UDim.new(0, 4)
+            
+            Input.Size = UDim2.new(1, -20, 1, 0)
+            Input.Position = UDim2.new(0, 10, 0, 0)
+            Input.BackgroundTransparency = 1
+            Input.TextColor3 = Aether.CurrentTheme.Text
+            Input.PlaceholderText = info.Name or "Type here..."
+            Input.Text = ""
+            Input.Font = Enum.Font.Gotham
+            Input.TextSize = 13
+            Input.TextXAlignment = Enum.TextXAlignment.Left
+            Input.Parent = BoxFrame
+            
+            Input.FocusLost:Connect(function(enter)
+                if enter and info.Callback then
+                    info.Callback(Input.Text)
+                end
+            end)
+        end
+
+        -- 9. KEYBIND
+        function Elements:AddKeybind(info)
+            local KeyFrame = Instance.new("Frame")
+            local Title = Instance.new("TextLabel")
+            local BindBtn = Instance.new("TextButton")
+            
+            local currentKey = info.Default or Enum.KeyCode.RightControl
+            
+            KeyFrame.Size = UDim2.new(1, -10, 0, 35)
+            KeyFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            KeyFrame.Parent = TabPage
+            Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 4)
+            
+            Title.Text = info.Name or "Keybind"
+            Title.Size = UDim2.new(0.6, 0, 1, 0)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.TextColor3 = Aether.CurrentTheme.Text
+            Title.Font = Enum.Font.Gotham
+            Title.TextSize = 13
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = KeyFrame
+            
+            BindBtn.Size = UDim2.new(0, 80, 0, 25)
+            BindBtn.Position = UDim2.new(1, -90, 0.5, -12.5)
+            BindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+            BindBtn.Text = currentKey.Name
+            BindBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            BindBtn.Font = Enum.Font.Gotham
+            BindBtn.TextSize = 12
+            BindBtn.Parent = KeyFrame
+            Instance.new("UICorner", BindBtn).CornerRadius = UDim.new(0, 4)
+            
+            local listening = false
+            BindBtn.MouseButton1Click:Connect(function()
+                listening = true
+                BindBtn.Text = "..."
+                UserInputService.InputBegan:Wait()
+            end)
+            
+            UserInputService.InputBegan:Connect(function(input)
+                if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                    currentKey = input.KeyCode
+                    BindBtn.Text = currentKey.Name
+                    listening = false
+                    if info.Callback then info.Callback(currentKey) end
+                elseif not listening and input.KeyCode == currentKey then
+                    if info.Callback then info.Callback(currentKey) end
+                end
+            end)
+        end
+        
+        -- 10. SECTION
+        function Elements:AddSection(text)
+            local Sec = Instance.new("TextLabel")
+            Sec.Size = UDim2.new(1, -10, 0, 20)
+            Sec.BackgroundTransparency = 1
+            Sec.Text = text
+            Sec.TextColor3 = Aether.CurrentTheme.Accent
+            Sec.Font = Enum.Font.GothamBold
+            Sec.TextSize = 14
+            Sec.TextXAlignment = Enum.TextXAlignment.Left
+            Sec.Parent = TabPage
+        end
+
+        -- 11. PARAGRAPH
+        function Elements:AddParagraph(title, desc)
+            local PFrame = Instance.new("Frame")
+            local T = Instance.new("TextLabel")
+            local D = Instance.new("TextLabel")
+            
+            PFrame.Size = UDim2.new(1, -10, 0, 60)
+            PFrame.BackgroundColor3 = Aether.CurrentTheme.Secondary
+            PFrame.Parent = TabPage
+            Instance.new("UICorner", PFrame).CornerRadius = UDim.new(0, 4)
+            
+            T.Text = title
+            T.Size = UDim2.new(1, -10, 0, 20)
+            T.Position = UDim2.new(0, 5, 0, 5)
+            T.BackgroundTransparency = 1
+            T.TextColor3 = Aether.CurrentTheme.Text
+            T.Font = Enum.Font.GothamBold
+            T.TextSize = 13
+            T.TextXAlignment = Enum.TextXAlignment.Left
+            T.Parent = PFrame
+            
+            D.Text = desc
+            D.Size = UDim2.new(1, -10, 0, 30)
+            D.Position = UDim2.new(0, 5, 0, 25)
+            D.BackgroundTransparency = 1
+            D.TextColor3 = Color3.fromRGB(150,150,150)
+            D.Font = Enum.Font.Gotham
+            D.TextSize = 12
+            D.TextWrapped = true
+            D.TextXAlignment = Enum.TextXAlignment.Left
+            D.Parent = PFrame
+        end
+        
+        -- 12. IMAGE
+        function Elements:AddImage(id)
+             local Img = Instance.new("ImageLabel")
+             Img.Size = UDim2.new(0, 100, 0, 100)
+             Img.BackgroundTransparency = 1
+             Img.Image = "rbxassetid://" .. id
+             Img.Parent = TabPage
+        end
+
+        -- 13. COLOR PICKER (Basico RGB)
+        function Elements:AddColorPicker(info)
+            -- Implementação simplificada para não estourar tokens
+            -- Usa sliders vermelhos, verdes e azuis em um dropdown
+            Elements:AddSection(info.Name)
+            Elements:AddSlider({Name = "R", Max = 255, Callback = function(v) end})
+            Elements:AddSlider({Name = "G", Max = 255, Callback = function(v) end})
+            Elements:AddSlider({Name = "B", Max = 255, Callback = function(v) end})
+        end
+
+        return Elements
+    end
+
+    return WindowFunctions
+end
+
+return Aether
